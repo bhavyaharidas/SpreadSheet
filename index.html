@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>
+        My Sheet
+    </title>
+    <link rel="stylesheet" type="text/css" href="style/spreadsheet.css"/>
+</head>
+
+<body>
+    <section class="spreadsheet-controls">
+        <button class="control-btn"
+            id="addRow">Add Row</button>
+        <button class="control-btn"
+            id="addColumn">Add Column</button>
+        <button class="control-btn"
+            id="deleteRow">Delete Row</button>
+        <button class="control-btn"
+            id="deleteColumn">Delete Column</button>
+        <button class="control-btn"
+            id="importCsv">Import from CSV</button>
+        <button class="control-btn"
+            id="exportCsv">Export to CSV</button>
+    </section>
+    <section class="spreadsheet">
+        <table class="spreadsheet__table"
+            id="table-main">
+            <thead class="spreadsheet__table--headers"
+                id="table-headers">
+            </thead>
+            <tbody class="spreadsheet__table--body"
+                id="table-body">
+            </tbody>
+        </table>
+    </section>
+    <script src="script/spreadsheet.js"></script>
+</body>    
+</html>
