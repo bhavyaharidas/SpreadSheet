@@ -234,9 +234,12 @@ importFromCsv = () => {
                     var table = document.createElement("table");
                     var rows = e.target.result.split("\n");
                     const data = [];
-                    for (let i = 0; i <= rows.length; i++) {
+                    for (let i = 0; i < rows.length; i++) {
                       let child = [];
-                      child = rows[i];
+                      let row = rows[i].split(",");
+                      for(let j = 0; j < row.length; j++){
+                        child.push(row[j]);
+                      }
                       data.push(child);
                     }
                     saveData(data);
@@ -425,7 +428,6 @@ createSpreadsheet = () => {
     }
   });
 };
-
 createSpreadsheet();
 createControls();
 
@@ -442,6 +444,8 @@ window.onclick = function(event) {
     }
   }
 };
+window.onload = () => {
+}
 /*
 document.getElementById("reset").addEventListener("click", e => {
   if (
