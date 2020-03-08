@@ -454,20 +454,47 @@ createCellObservable = cellId => {
 };
 
 createObservables = formula => {
-  if(formula.startsWith("=SUM")){
-    formula = formula.replace("SUM(","");
-    formula = formula.replace(")","");
-  }
-  let formulaArr = formula.split(/[=*/%+-]+/);
+  let formulaArr = [];
   let currentObs = [];
-  //["A1", "A2"] r-1-1, r-2-1
-  if (formulaArr.length > 2) {
-    for (let i = 1; i < formulaArr.length; i++) {
-      if (formulaArr[i].length === 2) {
-        let cellId = `r-${formulaArr[i].charAt(1)}-${formulaArr[i].charCodeAt(0) - 64}`;
+  if(formula.startsWith("=SUM")){
+    formula = formula.replace("=SUM(","");
+    formula = formula.replace(")","");
+    formulaArr = formula.split(":");
+    //Same Column
+    if(formulaArr[0].charAt(0) === formulaArr[1].charAt(0)){ 
+      let column = formulaArr[0].charCodeAt(0);
+      let startIndex = parseInt(formulaArr[0].charAt(1));
+      let endIndex = parseInt(formulaArr[1].charAt(1));
+      for(let i = startIndex; i <= endIndex; i++){
+        let cellId = `r-${i}-${column - 64}`
         currentObs.push(
           this.createCellObservable(cellId)
         );
+      }
+    }
+    //Same Row
+    else{
+      let row = formulaArr[0].charAt(1);
+      let startIndex = parseInt(formulaArr[0].charCodeAt(0)) - 64;
+      let endIndex = parseInt(formulaArr[1].charCodeAt(0)) - 64;
+      for(let i = startIndex; i <= endIndex; i++){
+        let cellId = `r-${row}-${i}`
+        currentObs.push(
+          this.createCellObservable(cellId)
+        );
+      }
+    }
+  }
+  else{
+    formulaArr = formula.split(/([=*/%+-])/g);
+    if (formulaArr.length > 2) {
+      for (let i = 1; i < formulaArr.length; i++) {
+        if (formulaArr[i].length === 2) {
+          let cellId = `r-${formulaArr[i].charAt(1)}-${formulaArr[i].charCodeAt(0) - 64}`;
+          currentObs.push(
+            this.createCellObservable(cellId)
+          );
+        }
       }
     }
   }
