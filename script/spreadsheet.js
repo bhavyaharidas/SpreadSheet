@@ -367,16 +367,50 @@ createControls = () => {
 }
 
 calculateExp = formula => {
-  let formulaArr = formula.split(/([=*/%+-])/g).splice(2);
+  let formulaArr = [];
   let input = [];
-  formulaArr.forEach(operand => {
-    if (operand.toLowerCase() !== operand.toUpperCase()) {
-        let cellId = `r-${operand.charAt(1)}-${operand.charCodeAt(0) - 64}`
+  if(formula.startsWith("=SUM")){
+    formula = formula.replace("=SUM(","");
+    formula = formula.replace(")","");
+    formulaArr = formula.split(":");
+    //Same Column
+    if(formulaArr[0].charAt(0) === formulaArr[1].charAt(0)){ 
+      let column = formulaArr[0].charCodeAt(0);
+      let startIndex = parseInt(formulaArr[0].charAt(1));
+      let endIndex = parseInt(formulaArr[1].charAt(1));
+      for(let i = startIndex; i <= endIndex; i++){
+        let cellId = `r-${i}-${column - 64}`
         input.push(document.getElementById(cellId).innerHTML);
-    } else {
-      input.push(operand);
+        if(i !== endIndex){
+          input.push("+");
+        }
+      }
     }
-  });
+    //Same Row
+    else{
+      let row = formulaArr[0].charAt(1);
+      let startIndex = parseInt(formulaArr[0].charCodeAt(0)) - 64;
+      let endIndex = parseInt(formulaArr[1].charCodeAt(0)) - 64;
+      for(let i = startIndex; i <= endIndex; i++){
+        let cellId = `r-${row}-${i}`
+        input.push(document.getElementById(cellId).innerHTML);
+        if(i !== endIndex){
+          input.push("+");
+        }
+      }
+    }
+  }
+  else{
+    formulaArr = formula.split(/([=*/%+-])/g).splice(2);
+    formulaArr.forEach(operand => {
+      if (operand.toLowerCase() !== operand.toUpperCase()) {
+          let cellId = `r-${operand.charAt(1)}-${operand.charCodeAt(0) - 64}`
+          input.push(document.getElementById(cellId).innerHTML);
+      } else {
+        input.push(operand);
+      }
+    });
+  }
   // process until we are done
   while (input.length > 1) {
     // find the first operator at the lowest level
@@ -415,6 +449,31 @@ calculateExp = formula => {
   return input[0];
 };
 
+createCellObservable = cellId => {
+  return rxjs.fromEvent(document.getElementById(cellId), "focusout");
+};
+
+createObservables = formula => {
+  if(formula.startsWith("=SUM")){
+    formula = formula.replace("SUM(","");
+    formula = formula.replace(")","");
+  }
+  let formulaArr = formula.split(/[=*/%+-]+/);
+  let currentObs = [];
+  //["A1", "A2"] r-1-1, r-2-1
+  if (formulaArr.length > 2) {
+    for (let i = 1; i < formulaArr.length; i++) {
+      if (formulaArr[i].length === 2) {
+        let cellId = `r-${formulaArr[i].charAt(1)}-${formulaArr[i].charCodeAt(0) - 64}`;
+        currentObs.push(
+          this.createCellObservable(cellId)
+        );
+      }
+    }
+  }
+  return currentObs;
+};
+
 createSpreadsheet = () => {
   const spreadsheetData = this.getData();
   defaultRowCount = spreadsheetData.length - 1 || defaultRowCount;
@@ -436,6 +495,16 @@ createSpreadsheet = () => {
 
   populateTable();
 
+  /*
+  tableBody.addEventListener("focusin", function(e) {
+    if (e.target && e.target.nodeName === "TD") {
+      let item = e.target;
+      const indices = item.id.split("-");
+      item.innerHTML = data[indices[1]][indices[2]].actualValue;
+    }
+  });
+  */
+
   // attach focusout event listener to whole table body container
   tableBody.addEventListener("focusout", function(e) {
     if (e.target && e.target.nodeName === "TD") {
@@ -443,8 +512,9 @@ createSpreadsheet = () => {
       const indices = item.id.split("-");
       let data = getData();
       let currentCellData = item.innerHTML;
+      data[indices[1]][indices[2]].actualValue = currentCellData;
       if(currentCellData.startsWith("=")){
-        let calcValue = calculateExp(item.innerHTML);
+        let calcValue = calculateExp(currentCellData);
         data[indices[1]][indices[2]].actualValue = item.innerHTML;
         data[indices[1]][indices[2]].displayValue = calcValue;
         document.getElementById(item.id).innerHTML = calcValue;
@@ -459,7 +529,8 @@ createSpreadsheet = () => {
           });
         });
       }else{
-        data[indices[1]][indices[2]] = item.innerHTML;
+        data[indices[1]][indices[2]].actualValue = item.innerHTML;
+        data[indices[1]][indices[2]].displayValue = item.innerHTML;
         saveData(data);
       }
     }
