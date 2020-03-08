@@ -2,6 +2,35 @@ let defaultRowCount = 15; // No of rows
 let defaultColCount = 12; // No of cols
 const SPREADSHEET_DB = "spreadsheet_db";
 let index;
+var data = [];
+
+const precedence = [
+    ["*", "/"],
+    ["+", "-"]
+  ];
+
+  const operators = {
+    "+": function(a, b) {
+      return a + b;
+    },
+    "-": function(a, b) {
+      return a - b;
+    },
+    "*": function(a, b) {
+      return a * b;
+    },
+    "/": function(a, b) {
+      return a / b;
+    }
+  };
+
+class TableCell {
+  constructor(id, displayValue, actualValue) {
+    this.id = id;
+    this.displayValue = displayValue;
+    this.actualValue = actualValue;
+  }
+}
 
 initializeData = () => {
   // console.log("initializeData");
@@ -17,11 +46,11 @@ initializeData = () => {
 };
 
 getData = () => {
-  let data = localStorage.getItem(SPREADSHEET_DB);
-  if (data === undefined || data === null || data === "undefined") {
+  // let data = localStorage.getItem(SPREADSHEET_DB);
+  if (data === undefined || data === null || data.length === 0) {
     return initializeData();
   }
-  return JSON.parse(data);
+  return data;
 };
 
 saveData = data => {
@@ -63,28 +92,22 @@ createHeaderRow = () => {
 
 createTableBodyRow = rowNum => {
   const tr = document.createElement("tr");
+  data = this.getData();
   tr.setAttribute("id", `r-${rowNum}`);
   for (let i = 0; i <= defaultColCount; i++) {
     const cell = document.createElement(`${i === 0 ? "th" : "td"}`);
     if (i === 0) {
       cell.contentEditable = false;
-      const span = document.createElement("span");
-      const dropDownDiv = document.createElement("div");
-      span.innerHTML = rowNum;
-      dropDownDiv.setAttribute("class", "dropdown");
-      dropDownDiv.innerHTML = `<div id="row-dropdown-${rowNum}" class="dropdown-content">
-          <p class="row-insert-top">Insert 1 row above</p>
-          <p class="row-insert-bottom">Insert 1 row below</p>
-          <p class="row-delete">Delete row</p>
-        </div>`;
-      cell.appendChild(span);
-      cell.appendChild(dropDownDiv);
+      cell.innerHTML = rowNum;
       cell.setAttribute("class", "row-header");
+    } else if (!data[rowNum][i]) {
+      let cellId = `r-${rowNum}-${i}`;
+      data[rowNum][i] = new TableCell(cellId, "", "");
+      cell.contentEditable = true;
     } else {
       cell.contentEditable = true;
     }
     cell.setAttribute("id", `r-${rowNum}-${i}`);
-    // cell.id = `${rowNum}-${i}`;
     tr.appendChild(cell);
   }
   return tr;
@@ -100,11 +123,10 @@ createTableBody = tableBody => {
 populateTable = () => {
   const data = this.getData();
   if (data === undefined || data === null) return;
-
   for (let i = 1; i < data.length; i++) {
     for (let j = 1; j < data[i].length; j++) {
       const cell = document.getElementById(`r-${i}-${j}`);
-      cell.innerHTML = data[i][j];
+      cell.innerHTML = data[i][j].displayValue;
     }
   }
 };
@@ -344,6 +366,55 @@ createControls = () => {
   
 }
 
+calculateExp = formula => {
+  let formulaArr = formula.split(/([=*/%+-])/g).splice(2);
+  let input = [];
+  formulaArr.forEach(operand => {
+    if (operand.toLowerCase() !== operand.toUpperCase()) {
+        let cellId = `r-${operand.charAt(1)}-${operand.charCodeAt(0) - 64}`
+        input.push(document.getElementById(cellId).innerHTML);
+    } else {
+      input.push(operand);
+    }
+  });
+  // process until we are done
+  while (input.length > 1) {
+    // find the first operator at the lowest level
+    let reduceAt = 0;
+    let found = false;
+    let newInput = [];
+    for (let i = 0; i < precedence.length; i++) {
+      for (let j = 1; j < input.length - 1; j++) {
+        if (precedence[i].indexOf(input[j]) >= 0) {
+          reduceAt = j;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+
+    // if we didn't find one, bail
+    if (!found) return;
+
+    // otherwise, reduce that operator
+
+    var f = operators[input[reduceAt]];
+
+    for (let i = 0; i < reduceAt - 1; i++) {
+      newInput.push(input[i]);
+    }
+    newInput.push(
+      "" + f(parseFloat(input[reduceAt - 1]), parseFloat(input[reduceAt + 1]))
+    );
+    for (let i = reduceAt + 2; i < input.length; i++) {
+      newInput.push(input[i]);
+    }
+    input = newInput;
+  }
+  return input[0];
+};
+
 createSpreadsheet = () => {
   const spreadsheetData = this.getData();
   defaultRowCount = spreadsheetData.length - 1 || defaultRowCount;
@@ -370,9 +441,27 @@ createSpreadsheet = () => {
     if (e.target && e.target.nodeName === "TD") {
       let item = e.target;
       const indices = item.id.split("-");
-      let spreadsheetData = getData();
-      spreadsheetData[indices[1]][indices[2]] = item.innerHTML;
-      saveData(spreadsheetData);
+      let data = getData();
+      let currentCellData = item.innerHTML;
+      if(currentCellData.startsWith("=")){
+        let calcValue = calculateExp(item.innerHTML);
+        data[indices[1]][indices[2]].actualValue = item.innerHTML;
+        data[indices[1]][indices[2]].displayValue = calcValue;
+        document.getElementById(item.id).innerHTML = calcValue;
+        createObservables(
+            data[indices[1]][indices[2]].actualValue
+        ).forEach(observable => {
+          observable.subscribe(() => {
+            document.getElementById(item.id).innerHTML = calculateExp(
+                data[indices[1]][indices[2]].actualValue
+            );
+            data[indices[1]][indices[2]].displayValue = document.getElementById(item.id).innerHTML;
+          });
+        });
+      }else{
+        data[indices[1]][indices[2]] = item.innerHTML;
+        saveData(data);
+      }
     }
   });
 
@@ -446,12 +535,4 @@ window.onclick = function(event) {
 };
 window.onload = () => {
 }
-/*
-document.getElementById("reset").addEventListener("click", e => {
-  if (
-    confirm("This will erase all data and set default configs. Are you sure?")
-  ) {
-    this.resetData();
-  }
-});
-*/
+
