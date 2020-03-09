@@ -124,6 +124,7 @@ populateTable = () => {
   const data = this.getData();
   if (data === undefined || data === null) return;
   for (let i = 1; i < data.length; i++) {
+    let row = data[i];
     for (let j = 1; j < data[i].length; j++) {
       const cell = document.getElementById(`r-${i}-${j}`);
       cell.innerHTML = data[i][j].displayValue;
@@ -246,6 +247,11 @@ const dscSort = (currentCol, a, b) => {
   return _b - _a;
 };
 
+importData = (rowNum, displayValue, actualValue) => {
+  let cellId = `r-${rowNum}-${i}`;
+  data[rowNum][i] = new TableCell(cellId, displayValue, actualValue);
+}
+
 importFromCsv = () => {
   var fileUpload = document.getElementById("fileUpload");
         var regex = /^([a-zA-Z0-9\s_\\.\-:])+(.csv|.txt)$/;
@@ -253,20 +259,59 @@ importFromCsv = () => {
             if (typeof (FileReader) != "undefined") {
                 var reader = new FileReader();
                 reader.onload = function (e) {
-                    var table = document.createElement("table");
+                    data = [];
+                    let formulae = [];
                     var rows = e.target.result.split("\n");
-                    const data = [];
+                    //Create first row of empty data for header
+                    let firstRow = [];
+                    for(let i = 0; i < rows[0].length; i++){
+                      firstRow.push("");
+                    }
+                    data.push(firstRow);
+                    //First create the skelton ignoring the formulae
                     for (let i = 0; i < rows.length; i++) {
                       let child = [];
+                      //Create first column of empty data for row number
+                      child.push("");
                       let row = rows[i].split(",");
                       for(let j = 0; j < row.length; j++){
-                        child.push(row[j]);
+                        let cellId = `r-${i + 1}-${j + 1}`;
+                        let displayValue = ""
+                        if(!row[j].startsWith("=")){
+                          displayValue = row[j];
+                        }else{
+                          let formula = [];
+                          formula.push(i);
+                          formula.push(j);
+                          formula.push(row[j]);
+                          formula.push(cellId);
+                          formulae.push(formula);
+                        }
+                        let cell = new TableCell(cellId, displayValue, "");
+                        child.push(cell);
                       }
                       data.push(child);
                     }
                     saveData(data);
                     createSpreadsheet();
+
+                    //then calculate formulae, create and subscribe observables
+                    for(let i = 0; i < formulae.length; i++){
+                      let calcValue = calculateExp(formulae[i][2]);
+                      data[formulae[i][0]][formulae[i][1]].actualValue = formulae[i][2];
+                      data[formulae[i][0]][formulae[i][1]].displayValue = calcValue;
+                      document.getElementById(formulae[i][3]).innerHTML = calcValue;
+                      createObservables(
+                        data[formulae[i][0]][formulae[i][1]].actualValue
+                      ).forEach(observable => {
+                      observable.subscribe(() => {
+                      document.getElementById(formulae[3]).innerHTML = calculateExp(
+                        data[formulae[i][0]][formulae[i][1]].actualValue
+                      );
+                    });
+                  });
                 }
+              }
                 reader.readAsText(fileUpload.files[0]);
             } else {
                 alert("This browser does not support HTML5.");
@@ -311,9 +356,12 @@ exportToCsv = () => {
     var row = []
     var col = spreadsheetData[i];
     
-    for (var j = 1; j < col.length; j++) 
-        row.push(col[j]);
-    
+    for (var j = 1; j < col.length; j++){
+      if(col[j].actualValue !== "")
+        row.push(col[j].actualValue);
+      else
+        row.push(col[j].displayValue);
+    }  
     csv.push(row.join(","));     
   }
   // Download CSV file
