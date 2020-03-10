@@ -1,6 +1,8 @@
 let defaultRowCount = 15; // No of rows
 let defaultColCount = 12; // No of cols
 const SPREADSHEET_DB = "spreadsheet_db";
+let selectedRowIndex = -1;
+let selectedColIndex = -1;
 let index;
 var data = [];
 
@@ -133,53 +135,60 @@ populateTable = () => {
 };
 
 // Utility function to add row
-addRow = (currentRow, direction) => {
-  let data = this.getData();
-  const colCount = data[0].length;
-  const newRow = new Array(colCount).fill("");
-  if (direction === "top") {
-    data.splice(currentRow, 0, newRow);
-  } else if (direction === "bottom") {
-    data.splice(currentRow + 1, 0, newRow);
+addRow = () => {
+  if(selectedRowIndex > 0){
+    let data = this.getData();
+    const colCount = data[0].length;
+    let rowPos = selectedRowIndex + 1;
+    const newRow = new Array(colCount).fill("");
+    data.splice(rowPos, 0, newRow);
+    defaultRowCount++;
+    // saveData(data);
+    this.createSpreadsheet();
+    selectedRowIndex = -1;
   }
-  defaultRowCount++;
-  saveData(data);
-  this.createSpreadsheet();
 };
 
 // Utility function to delete row
-deleteRow = currentRow => {
-  let data = this.getData();
-  data.splice(currentRow, 1);
-  defaultRowCount++;
-  saveData(data);
-  this.createSpreadsheet();
+deleteRow = () => {
+  if (selectedRowIndex > 0 && defaultRowCount > 1) {
+    let data = this.getData();
+    data.splice(selectedRowIndex, 1);
+    defaultRowCount--;
+    // saveData(data);
+    this.createSpreadsheet();
+    selectedRowIndex = -1;
+  }
 };
 
 // Utility function to add columns
-addColumn = (currentCol, direction) => {
-  let data = this.getData();
-  for (let i = 0; i <= defaultRowCount; i++) {
-    if (direction === "left") {
-      data[i].splice(currentCol, 0, "");
-    } else if (direction === "right") {
-      data[i].splice(currentCol + 1, 0, "");
+addColumn = () => {
+  let colPos = selectedColIndex + 1;
+  if (colPos < 27 && colPos > 0 && defaultColCount < 26) {
+    let data = this.getData();
+    for (let i = 0; i <= defaultRowCount; i++) {
+      data[i].splice(colPos, 0, "");
     }
+    defaultColCount++;
+    //  saveData(data);
+    this.createSpreadsheet();
+    selectedColIndex = -1;
   }
-  defaultColCount++;
-  saveData(data);
-  this.createSpreadsheet();
 };
 
 // Utility function to delete column
 deleteColumn = currentCol => {
-  let data = this.getData();
-  for (let i = 0; i <= defaultRowCount; i++) {
-    data[i].splice(currentCol, 1);
+  let colPos = selectedColIndex;
+  if (colPos < 27 && colPos > 0 && defaultColCount > 1) {
+    let data = this.getData();
+    for (let i = 0; i <= defaultRowCount; i++) {
+      data[i].splice(colPos, 1);
+    }
+    defaultColCount--;
+    //  saveData(data);
+    this.createSpreadsheet();
+    selectedColIndex = -1;
   }
-  defaultColCount++;
-  saveData(data);
-  this.createSpreadsheet();
 };
 
 // Map for storing the sorting history of every column;
@@ -379,28 +388,28 @@ createControls = () => {
   addRowBtn.addEventListener("click", function(e) {
     if (e.target) {
         const indices = index.split("-");
-        addRow(parseInt(indices[1]), "bottom");  
+        addRow();  
     }
   });
 
   addColumnBtn.addEventListener("click", function(e) {
     if (e.target) {
         const indices = index.split("-");
-        addColumn(parseInt(indices[2]), "right");  
+        addColumn();  
     }
   });
 
   deleteRowBtn.addEventListener("click", function(e) {
     if (e.target) {
         const indices = index.split("-");
-        deleteRow(parseInt(indices[1]));  
+        deleteRow();  
     }
   });
 
   deleteColumnBtn.addEventListener("click", function(e) {
     if (e.target) {
         const indices = index.split("-");
-        deleteColumn(parseInt(indices[2]));  
+        deleteColumn();  
     }
   });
 
@@ -613,13 +622,13 @@ createSpreadsheet = () => {
 
   // Attach click event listener to table body
   tableBody.addEventListener("click", function(e) {
+    clearSelection();
     if (e.target) {
       index = e.target.id;
-      if (e.target.className === "dropbtn") {
-        const idArr = e.target.id.split("-");
-        document
-          .getElementById(`row-dropdown-${idArr[2]}`)
-          .classList.toggle("show");
+      if (e.target.className === "row-header") {
+        e.target.classList.add("selected");
+        e.target.parentNode.classList.add("selected");
+        selectedRowIndex = parseInt(e.target.parentNode.id.split("-")[1]);
       }
       if (e.target.className === "row-insert-top") {
         const indices = e.target.parentNode.id.split("-");
@@ -636,30 +645,30 @@ createSpreadsheet = () => {
     }
   });
 
+  // Helper function to highlight the selected headers
+  highlightColumn = colId => {
+      let data = this.getData();
+      for (let i = 1; i < data.length; i++) {
+        document.getElementById(`r-${i}-${colId}`).classList.add("selected");
+      }
+  };
+
+    // Reset the previously selected headers
+    clearSelection = () => {
+      selectedRowIndex = -1;
+      selectedColIndex = -1;
+      document.querySelectorAll(".selected").forEach(node => {
+        node.classList.remove("selected");
+      });
+    };
+
   // Attach click event listener to table headers
   tableHeaders.addEventListener("click", function(e) {
-    if (e.target) {
-      if (e.target.className === "column-header-span") {
-        sortColumn(parseInt(e.target.parentNode.id.split("-")[2]));
-      }
-      if (e.target.className === "dropbtn") {
-        const idArr = e.target.id.split("-");
-        document
-          .getElementById(`col-dropdown-${idArr[2]}`)
-          .classList.toggle("show");
-      }
-      if (e.target.className === "col-insert-left") {
-        const indices = e.target.parentNode.id.split("-");
-        addColumn(parseInt(indices[2]), "left");
-      }
-      if (e.target.className === "col-insert-right") {
-        const indices = e.target.parentNode.id.split("-");
-        addColumn(parseInt(indices[2]), "right");
-      }
-      if (e.target.className === "col-delete") {
-        const indices = e.target.parentNode.id.split("-");
-        deleteColumn(parseInt(indices[2]));
-      }
+    clearSelection();
+    if (e.target && e.target.className === "column-header") {
+      e.target.classList.add("selected");
+      highlightColumn(parseInt(e.target.id.split("-")[2]));
+      selectedColIndex = parseInt(e.target.id.split("-")[2]);
     }
   });
 };
