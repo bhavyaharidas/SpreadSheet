@@ -5,39 +5,8 @@
   }
   
   html {
-    font-size: 62.5%;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  }
-  
-  .title {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    margin: 1rem;
-  }
-  
-  .title__logo {
-    height: 7rem;
-    margin: 1rem;
-  }
-  
-  .title__text {
-    margin-left: 2rem;
-  }
-  
-  .title__text--name {
-    font-size: 3.6rem;
-    display: inline;
-    font-weight: 600;
-  }
-  
-  .title__text--description {
-    font-size: 1.6rem;
-    font-weight: 200;
-  }
-  
-  .spreadsheet {
-    margin: 1rem 0.5rem;
+    font-size: 65%;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
   }
   
   table,
@@ -68,19 +37,17 @@
   th {
     padding: 0.2rem 0.4rem;
   }
-  th > .dropdown {
-    float: right;
-  }
+
   
   tbody th {
     min-width: 5rem;
     background: #fafafa;
   }
-  /* Show the dropdown menu (use JS to add this class to the .dropdown-content container when the user clicks on the dropdown button) */
-  .show {
-    display: block;
+
+  .spreadsheet {
+    margin: 1rem 0.5rem;
   }
-  
+
   .column-header-span {
     cursor: pointer;
   }
@@ -102,6 +69,7 @@
     transition: ease 0.3s;
   }
   
+  /*Highlights column/row upon selection*/
   .selected {
     background-color: grey;
   }
