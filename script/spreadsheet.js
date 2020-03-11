@@ -1,6 +1,16 @@
-let defaultRowCount = 15; // No of rows
-let defaultColCount = 15; // No of cols
+class TableCell {
+  constructor(id, displayValue, actualValue) {
+    this.id = id;
+    this.displayValue = displayValue;
+    this.actualValue = actualValue;
+    this.subscriptionObj = [];
+  }
+}
+
+let defaultRowCount = 15; // Number of rows on page load
+let defaultColCount = 15; // Number of cols on page load
 const SPREADSHEET_DB = "spreadsheet_db";
+
 let selectedRowIndex = -1;
 let selectedColIndex = -1;
 let index;
@@ -25,15 +35,6 @@ const precedence = [
       return a / b;
     }
   };
-
-class TableCell {
-  constructor(id, displayValue, actualValue) {
-    this.id = id;
-    this.displayValue = displayValue;
-    this.actualValue = actualValue;
-    this.subscriptionObj = [];
-  }
-}
 
 initializeData = () => {
   // console.log("initializeData");
@@ -210,7 +211,7 @@ sortColumn = currentCol => {
     sortingHistory.set(currentCol, "asc");
   }
   data.splice(0, 0, new Array(data[0].length).fill(""));
-  saveData(data);
+  //saveData(data);
   this.createSpreadsheet();
 };
 
@@ -299,7 +300,7 @@ importFromCsv = () => {
                       }
                       data.push(child);
                     }
-                    saveData(data);
+                    //saveData(data);
                     createSpreadsheet();
 
                     //then calculate formulae, create and subscribe observables
@@ -607,7 +608,7 @@ createSpreadsheet = () => {
         }
         //data[indices[1]][indices[2]].actualValue = item.innerHTML;
         data[indices[1]][indices[2]].displayValue = item.innerHTML;
-        saveData(data);
+        //saveData(data);
       }
   }
 
