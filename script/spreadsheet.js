@@ -1,5 +1,5 @@
 let defaultRowCount = 15; // No of rows
-let defaultColCount = 12; // No of cols
+let defaultColCount = 15; // No of cols
 const SPREADSHEET_DB = "spreadsheet_db";
 let selectedRowIndex = -1;
 let selectedColIndex = -1;
@@ -59,11 +59,6 @@ saveData = data => {
   localStorage.setItem(SPREADSHEET_DB, JSON.stringify(data));
 };
 
-resetData = data => {
-  localStorage.removeItem(SPREADSHEET_DB);
-  this.createSpreadsheet();
-};
-
 createHeaderRow = () => {
   const tr = document.createElement("tr");
   tr.setAttribute("id", "h-0");
@@ -76,16 +71,8 @@ createHeaderRow = () => {
       const span = document.createElement("span");
       var res = String.fromCharCode(64 + i);
       span.innerHTML = res;
-      span.setAttribute("class", "column-header-span");
-      const dropDownDiv = document.createElement("div");
-      dropDownDiv.setAttribute("class", "dropdown");
-      dropDownDiv.innerHTML = `<div id="col-dropdown-${i}" class="dropdown-content">
-          <p class="col-insert-left">Insert 1 column left</p>
-          <p class="col-insert-right">Insert 1 column right</p>
-          <p class="col-delete">Delete column</p>
-        </div>`;
+      span.setAttribute("class", "column-header-span"); 
       th.appendChild(span);
-      th.appendChild(dropDownDiv);
     }
     tr.appendChild(th);
   }
@@ -306,19 +293,9 @@ importFromCsv = () => {
 
                     //then calculate formulae, create and subscribe observables
                     for(let i = 0; i < formulae.length; i++){
-                      let calcValue = calculateExp(formulae[i][2]);
-                      data[formulae[i][0]][formulae[i][1]].actualValue = formulae[i][2];
-                      data[formulae[i][0]][formulae[i][1]].displayValue = calcValue;
-                      document.getElementById(formulae[i][3]).innerHTML = calcValue;
-                      createObservables(
-                        data[formulae[i][0]][formulae[i][1]].actualValue
-                      ).forEach(observable => {
-                      observable.subscribe(() => {
-                      document.getElementById(formulae[3]).innerHTML = calculateExp(
-                        data[formulae[i][0]][formulae[i][1]].actualValue
-                      );
-                    });
-                  });
+                      let formulaCell = document.getElementById(formulae[i][3]);
+                      formulaCell.innerHTML = formulae[i][2];
+                      elementFocusout(formulaCell);
                 }
               }
                 reader.readAsText(fileUpload.files[0]);
@@ -415,6 +392,7 @@ createControls = () => {
 
   importCsvBtn.addEventListener("click", function(e) {
     importFromCsv();
+    document.getElementById("fileUpload").value = "";
   });
 
   exportCsvBtn.addEventListener("click", function() {
@@ -589,10 +567,8 @@ createSpreadsheet = () => {
   });
   */
 
-  // attach focusout event listener to whole table body container
-  tableBody.addEventListener("focusout", function(e) {
-    if (e.target && e.target.nodeName === "TD") {
-      let item = e.target;
+  elementFocusout = (item) => {
+    
       const indices = item.id.split("-");
       let data = getData();
       let currentCellData = item.innerHTML;
@@ -617,6 +593,13 @@ createSpreadsheet = () => {
         data[indices[1]][indices[2]].displayValue = item.innerHTML;
         saveData(data);
       }
+  }
+
+  // attach focusout event listener to whole table body container
+  tableBody.addEventListener("focusout", function(e) {
+    if (e.target && e.target.nodeName === "TD") {
+      let item = e.target;
+      elementFocusout(item);
     }
   });
 
@@ -674,20 +657,3 @@ createSpreadsheet = () => {
 };
 createSpreadsheet();
 createControls();
-
-// Close the dropdown menu if the user clicks outside of it
-window.onclick = function(event) {
-  if (!event.target.matches(".dropbtn")) {
-    var dropdowns = document.getElementsByClassName("dropdown-content");
-    var i;
-    for (i = 0; i < dropdowns.length; i++) {
-      var openDropdown = dropdowns[i];
-      if (openDropdown.classList.contains("show")) {
-        openDropdown.classList.remove("show");
-      }
-    }
-  }
-};
-window.onload = () => {
-}
-
