@@ -1,9 +1,10 @@
+//Class represents each cell in the grid
 class TableCell {
   constructor(id, displayValue, actualValue) {
-    this.id = id;
-    this.displayValue = displayValue;
-    this.actualValue = actualValue;
-    this.subscriptionObj = [];
+    this.id = id; //cell id
+    this.displayValue = displayValue; //Number
+    this.actualValue = actualValue; //Formula if exists
+    this.subscriptionObj = []; //Subscription objects corresponding to the table cell if exists
   }
 }
 
@@ -11,11 +12,15 @@ let defaultRowCount = 15; // Number of rows on page load
 let defaultColCount = 15; // Number of cols on page load
 const SPREADSHEET_DB = "spreadsheet_db";
 
+//Current indices
 let selectedRowIndex = -1;
 let selectedColIndex = -1;
 let index;
+
+//Global array holding grid tablecell values
 var data = [];
 
+//Order to determine precedence in math calc
 const precedence = [
     ["*", "/"],
     ["+", "-"]
@@ -36,8 +41,8 @@ const precedence = [
     }
   };
 
-initializeData = () => {
-  // console.log("initializeData");
+//Initialize empty grid upon page load
+initializeGrid = () => {
   const data = [];
   for (let i = 0; i <= defaultRowCount; i++) {
     const child = [];
@@ -49,14 +54,16 @@ initializeData = () => {
   return data;
 };
 
+//Returns the global data if it is not empty, otherwise initializes data.
 getData = () => {
   // let data = localStorage.getItem(SPREADSHEET_DB);
   if (data === undefined || data === null || data.length === 0) {
-    return initializeData();
+    return initializeGrid();
   }
   return data;
 };
 
+//Helper method to replace subscription objects while saving to local storage.
 function jsonReplacer(key,value)
 {
     if (key=="subscriptionObj") return undefined;
@@ -67,6 +74,7 @@ saveData = data => {
   localStorage.setItem(SPREADSHEET_DB, JSON.stringify(data, jsonReplacer));
 };
 
+//Creates the header row of the grid
 createHeaderRow = () => {
   const tr = document.createElement("tr");
   tr.setAttribute("id", "h-0");
@@ -77,6 +85,7 @@ createHeaderRow = () => {
     // th.innerHTML = i === 0 ? `` : `Col ${i}`;
     if (i !== 0) {
       const span = document.createElement("span");
+      //Calculates the column header letter in upper case
       var res = String.fromCharCode(64 + i);
       span.innerHTML = res;
       span.setAttribute("class", "column-header-span"); 
@@ -87,7 +96,21 @@ createHeaderRow = () => {
   return tr;
 };
 
-createTableBodyRow = rowNum => {
+// Fill Data in created table from global data variable
+populateTable = () => {
+  const data = this.getData();
+  if (data === undefined || data === null) return;
+  for (let i = 1; i < data.length; i++) {
+    let row = data[i];
+    for (let j = 1; j < data[i].length; j++) {
+      const cell = document.getElementById(`r-${i}-${j}`);
+      cell.innerHTML = data[i][j].displayValue;
+    }
+  }
+};
+
+//Creates each table body row
+createRow = rowNum => {
   const tr = document.createElement("tr");
   data = this.getData();
   tr.setAttribute("id", `r-${rowNum}`);
@@ -99,6 +122,7 @@ createTableBodyRow = rowNum => {
       cell.setAttribute("class", "row-header");
     } else if (!data[rowNum][i]) {
       let cellId = `r-${rowNum}-${i}`;
+      //Creates new instance of TableCell and adds it to the data grid
       data[rowNum][i] = new TableCell(cellId, "", "");
       cell.contentEditable = true;
     } else {
@@ -112,39 +136,29 @@ createTableBodyRow = rowNum => {
 
 createTableBody = tableBody => {
   for (let rowNum = 1; rowNum <= defaultRowCount; rowNum++) {
-    tableBody.appendChild(this.createTableBodyRow(rowNum));
+    tableBody.appendChild(this.createRow(rowNum));
   }
 };
 
-// Fill Data in created table from localstorage
-populateTable = () => {
-  const data = this.getData();
-  if (data === undefined || data === null) return;
-  for (let i = 1; i < data.length; i++) {
-    let row = data[i];
-    for (let j = 1; j < data[i].length; j++) {
-      const cell = document.getElementById(`r-${i}-${j}`);
-      cell.innerHTML = data[i][j].displayValue;
-    }
-  }
-};
-
-// Utility function to add row
+// Helper method to add row
+//Adds onw row below the selected row
 addRow = () => {
   if(selectedRowIndex > 0){
     let data = this.getData();
+    let newRowIndex = selectedRowIndex + 1;
     const colCount = data[0].length;
-    let rowPos = selectedRowIndex + 1;
     const newRow = new Array(colCount).fill("");
-    data.splice(rowPos, 0, newRow);
+    data.splice(newRowIndex, 0, newRow);
     defaultRowCount++;
     // saveData(data);
     this.createSpreadsheet();
+    //Reset the selected row index
     selectedRowIndex = -1;
   }
 };
 
-// Utility function to delete row
+// Helper method to delete row
+//Deletes the selected row
 deleteRow = () => {
   if (selectedRowIndex > 0 && defaultRowCount > 1) {
     let data = this.getData();
@@ -152,17 +166,19 @@ deleteRow = () => {
     defaultRowCount--;
     // saveData(data);
     this.createSpreadsheet();
+    //Reset the selected row index
     selectedRowIndex = -1;
   }
 };
 
-// Utility function to add columns
+// Helper method to add column
+//Adds onw row below the selected column
 addColumn = () => {
-  let colPos = selectedColIndex + 1;
-  if (colPos < 27 && colPos > 0 && defaultColCount < 26) {
+  let newColIndex = selectedColIndex + 1;
+  if (newColIndex < 27 && newColIndex > 0 && defaultColCount < 26) {
     let data = this.getData();
     for (let i = 0; i <= defaultRowCount; i++) {
-      data[i].splice(colPos, 0, "");
+      data[i].splice(newColIndex, 0, "");
     }
     defaultColCount++;
     //  saveData(data);
@@ -171,7 +187,8 @@ addColumn = () => {
   }
 };
 
-// Utility function to delete column
+// Helper method to delete column
+//Deletes the selected column
 deleteColumn = currentCol => {
   let colPos = selectedColIndex;
   if (colPos < 27 && colPos > 0 && defaultColCount > 1) {
@@ -186,84 +203,17 @@ deleteColumn = currentCol => {
   }
 };
 
-// Map for storing the sorting history of every column;
-const sortingHistory = new Map();
-
-// Utility function to sort columns
-sortColumn = currentCol => {
-  let spreadSheetData = this.getData();
-  let data = spreadSheetData.slice(1);
-  if (!data.some(a => a[currentCol] !== "")) return;
-  if (sortingHistory.has(currentCol)) {
-    const sortOrder = sortingHistory.get(currentCol);
-    switch (sortOrder) {
-      case "desc":
-        data.sort(ascSort.bind(this, currentCol));
-        sortingHistory.set(currentCol, "asc");
-        break;
-      case "asc":
-        data.sort(dscSort.bind(this, currentCol));
-        sortingHistory.set(currentCol, "desc");
-        break;
-    }
-  } else {
-    data.sort(ascSort.bind(this, currentCol));
-    sortingHistory.set(currentCol, "asc");
-  }
-  data.splice(0, 0, new Array(data[0].length).fill(""));
-  //saveData(data);
-  this.createSpreadsheet();
-};
-
-// Compare Functions for sorting - ascending
-const ascSort = (currentCol, a, b) => {
-  let _a = a[currentCol];
-  let _b = b[currentCol];
-  if (_a === "") return 1;
-  if (_b === "") return -1;
-
-  // Check for strings and numbers
-  if (isNaN(_a) || isNaN(_b)) {
-    _a = _a.toUpperCase();
-    _b = _b.toUpperCase();
-    if (_a < _b) return -1;
-    if (_a > _b) return 1;
-    return 0;
-  }
-  return _a - _b;
-};
-
-// Descending compare function
-const dscSort = (currentCol, a, b) => {
-  let _a = a[currentCol];
-  let _b = b[currentCol];
-  if (_a === "") return 1;
-  if (_b === "") return -1;
-
-  // Check for strings and numbers
-  if (isNaN(_a) || isNaN(_b)) {
-    _a = _a.toUpperCase();
-    _b = _b.toUpperCase();
-    if (_a < _b) return 1;
-    if (_a > _b) return -1;
-    return 0;
-  }
-  return _b - _a;
-};
-
-importData = (rowNum, displayValue, actualValue) => {
-  let cellId = `r-${rowNum}-${i}`;
-  data[rowNum][i] = new TableCell(cellId, displayValue, actualValue);
-}
-
+// Helper method to import grid data from csv via upload
 importFromCsv = () => {
   var fileUpload = document.getElementById("fileUpload");
+        //File validation
         var regex = /^([a-zA-Z0-9\s_\\.\-:])+(.csv|.txt)$/;
         if (regex.test(fileUpload.value.toLowerCase())) {
             if (typeof (FileReader) != "undefined") {
                 var reader = new FileReader();
                 reader.onload = function (e) {
                     data = [];
+                    //Holds the list of formulae in the csv file if any
                     let formulae = [];
                     var rows = e.target.result.split("\n");
                     if(rows[rows.length - 1] == ""){
@@ -285,9 +235,10 @@ importFromCsv = () => {
                       for(let j = 0; j < columnCount; j++){
                         let cellId = `r-${i + 1}-${j + 1}`;
                         let displayValue = ""
+                        //If cell data not a formula 
                         if(!row[j].startsWith("=")){
                           displayValue = row[j];
-                        }else{
+                        }else{ //If cell data is a formular add it to formulae array.
                           let formula = [];
                           formula.push(i);
                           formula.push(j);
@@ -307,6 +258,7 @@ importFromCsv = () => {
                     for(let i = 0; i < formulae.length; i++){
                       let formulaCell = document.getElementById(formulae[i][3]);
                       formulaCell.innerHTML = formulae[i][2];
+                      //Call the helper method to mimic a focusout
                       elementFocusout(formulaCell);
                 }
               }
@@ -319,6 +271,7 @@ importFromCsv = () => {
         }
 }
 
+//Helper method to download grid as csv
 downloadCSV = (csv, filename) => {
   var csvFile;
   var downloadLink;
@@ -328,8 +281,6 @@ downloadCSV = (csv, filename) => {
 
   // Download link
   downloadLink = document.createElement("a");
-
-  // File name
   downloadLink.download = filename;
 
   // Create a link to the file
@@ -337,14 +288,13 @@ downloadCSV = (csv, filename) => {
 
   // Hide download link
   downloadLink.style.display = "none";
-
-  // Add the link to DOM
   document.body.appendChild(downloadLink);
 
   // Click download link
   downloadLink.click();
 }
 
+//Helper method to convert global data variable to csv grid
 exportToCsv = () => {
   var filename = 'grid.csv'
   var csv = [];
@@ -354,6 +304,7 @@ exportToCsv = () => {
     var row = []
     var col = spreadsheetData[i];
     
+    //if a formula exists, then add it. otherwise add the display number
     for (var j = 1; j < col.length; j++){
       if(col[j].actualValue !== "")
         row.push(col[j].actualValue);
@@ -366,6 +317,8 @@ exportToCsv = () => {
   downloadCSV(csv.join("\n"), filename);
 }
 
+//Creates various controls for the buttons
+//Adds event listeners associated with its fucntionality.
 createControls = () => {
   const addRowBtn = document.getElementById("addRow");
   const addColumnBtn = document.getElementById("addColumn");
@@ -413,9 +366,11 @@ createControls = () => {
   
 }
 
-calculateExp = formula => {
+//Helper method to calculate the given math formula
+calculateExpression = formula => {
   let formulaArr = [];
   let input = [];
+  //If the formula starts with sum, add all cell values in the range with a + sign btw them
   if(formula.startsWith("=SUM")){
     formula = formula.replace("=SUM(","");
     formula = formula.replace(")","");
@@ -446,7 +401,7 @@ calculateExp = formula => {
         }
       }
     }
-  }
+  } //if formula does not start with SUM, add all cell data and operators to the input array.
   else{
     formulaArr = formula.split(/([=*/%+-])/g).splice(2);
     formulaArr.forEach(operand => {
@@ -458,7 +413,7 @@ calculateExp = formula => {
       }
     });
   }
-  // process until we are done
+  //Continue the process till the formula array is empty
   while (input.length > 1) {
     // find the first operator at the lowest level
     let reduceAt = 0;
@@ -496,9 +451,11 @@ calculateExp = formula => {
   return input[0];
 };
 
+//Makes use of fromEvent mehod of rxjs to return and obeservable associated with the given cell.
 createCellObservable = cellId => {
   return rxjs.fromEvent(document.getElementById(cellId), "focusout");
 };
+
 
 createObservables = formula => {
   let formulaArr = [];
@@ -585,7 +542,7 @@ createSpreadsheet = () => {
       let data = getData();
       let currentCellData = item.innerHTML;
       if(currentCellData.startsWith("=")){
-        let calcValue = calculateExp(currentCellData);
+        let calcValue = calculateExpression(currentCellData);
         data[indices[1]][indices[2]].actualValue = item.innerHTML;
         data[indices[1]][indices[2]].displayValue = calcValue;
         document.getElementById(item.id).innerHTML = calcValue;
@@ -593,7 +550,7 @@ createSpreadsheet = () => {
             data[indices[1]][indices[2]].actualValue
         ).forEach(observable => {
           data[indices[1]][indices[2]].subscriptionObj.push(observable.subscribe(() => {
-            document.getElementById(item.id).innerHTML = calculateExp(
+            document.getElementById(item.id).innerHTML = calculateExpression(
                 data[indices[1]][indices[2]].actualValue
             );
             data[indices[1]][indices[2]].displayValue = document.getElementById(item.id).innerHTML;
@@ -672,5 +629,7 @@ createSpreadsheet = () => {
     }
   });
 };
+
+//Call base methods for initial page load
 createSpreadsheet();
 createControls();
