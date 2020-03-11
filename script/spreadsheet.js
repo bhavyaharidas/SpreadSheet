@@ -31,6 +31,7 @@ class TableCell {
     this.id = id;
     this.displayValue = displayValue;
     this.actualValue = actualValue;
+    this.subscriptionObj = [];
   }
 }
 
@@ -55,8 +56,14 @@ getData = () => {
   return data;
 };
 
+function jsonReplacer(key,value)
+{
+    if (key=="subscriptionObj") return undefined;
+    else return value;
+}
+
 saveData = data => {
-  localStorage.setItem(SPREADSHEET_DB, JSON.stringify(data));
+  localStorage.setItem(SPREADSHEET_DB, JSON.stringify(data, jsonReplacer));
 };
 
 createHeaderRow = () => {
@@ -572,7 +579,6 @@ createSpreadsheet = () => {
       const indices = item.id.split("-");
       let data = getData();
       let currentCellData = item.innerHTML;
-      data[indices[1]][indices[2]].actualValue = currentCellData;
       if(currentCellData.startsWith("=")){
         let calcValue = calculateExp(currentCellData);
         data[indices[1]][indices[2]].actualValue = item.innerHTML;
@@ -581,15 +587,21 @@ createSpreadsheet = () => {
         createObservables(
             data[indices[1]][indices[2]].actualValue
         ).forEach(observable => {
-          observable.subscribe(() => {
+          data[indices[1]][indices[2]].subscriptionObj.push(observable.subscribe(() => {
             document.getElementById(item.id).innerHTML = calculateExp(
                 data[indices[1]][indices[2]].actualValue
             );
             data[indices[1]][indices[2]].displayValue = document.getElementById(item.id).innerHTML;
-          });
+          }));
         });
       }else{
-        data[indices[1]][indices[2]].actualValue = item.innerHTML;
+        if(currentCellData !== data[indices[1]][indices[2]].displayValue && data[indices[1]][indices[2]].actualValue.startsWith("=")){
+          data[indices[1]][indices[2]].subscriptionObj.forEach(subObj => {
+            subObj.unsubscribe();
+          })
+          data[indices[1]][indices[2]].actualValue = item.innerHTML;
+        }
+        //data[indices[1]][indices[2]].actualValue = item.innerHTML;
         data[indices[1]][indices[2]].displayValue = item.innerHTML;
         saveData(data);
       }
