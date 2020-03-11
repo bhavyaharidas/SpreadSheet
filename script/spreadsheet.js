@@ -265,9 +265,13 @@ importFromCsv = () => {
                     data = [];
                     let formulae = [];
                     var rows = e.target.result.split("\n");
+                    if(rows[rows.length - 1] == ""){
+                       rows.splice(rows.length - 1, 1);
+                    }
                     //Create first row of empty data for header
                     let firstRow = [];
-                    for(let i = 0; i < rows[0].length; i++){
+                    let columnCount = rows[0].split(",").length <= 26 ? rows[0].split(",").length : 26;
+                    for(let i = 0; i <= columnCount; i++){
                       firstRow.push("");
                     }
                     data.push(firstRow);
@@ -277,7 +281,7 @@ importFromCsv = () => {
                       //Create first column of empty data for row number
                       child.push("");
                       let row = rows[i].split(",");
-                      for(let j = 0; j < row.length; j++){
+                      for(let j = 0; j < columnCount; j++){
                         let cellId = `r-${i + 1}-${j + 1}`;
                         let displayValue = ""
                         if(!row[j].startsWith("=")){
