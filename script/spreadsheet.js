@@ -368,18 +368,18 @@ createControls = () => {
 
 //Helper method to calculate the given math formula
 calculateExpression = formula => {
-  let formulaArr = [];
+  let formulaElements = [];
   let input = [];
   //If the formula starts with sum, add all cell values in the range with a + sign btw them
   if(formula.startsWith("=SUM")){
     formula = formula.replace("=SUM(","");
     formula = formula.replace(")","");
-    formulaArr = formula.split(":");
+    formulaElements = formula.split(":");
     //Same Column
-    if(formulaArr[0].charAt(0) === formulaArr[1].charAt(0)){ 
-      let column = formulaArr[0].charCodeAt(0);
-      let startIndex = parseInt(formulaArr[0].charAt(1));
-      let endIndex = parseInt(formulaArr[1].charAt(1));
+    if(formulaElements[0].charAt(0) === formulaElements[1].charAt(0)){ 
+      let column = formulaElements[0].charCodeAt(0);
+      let startIndex = parseInt(formulaElements[0].charAt(1));
+      let endIndex = parseInt(formulaElements[1].charAt(1));
       for(let i = startIndex; i <= endIndex; i++){
         let cellId = `r-${i}-${column - 64}`
         input.push(document.getElementById(cellId).innerHTML);
@@ -390,9 +390,9 @@ calculateExpression = formula => {
     }
     //Same Row
     else{
-      let row = formulaArr[0].charAt(1);
-      let startIndex = parseInt(formulaArr[0].charCodeAt(0)) - 64;
-      let endIndex = parseInt(formulaArr[1].charCodeAt(0)) - 64;
+      let row = formulaElements[0].charAt(1);
+      let startIndex = parseInt(formulaElements[0].charCodeAt(0)) - 64;
+      let endIndex = parseInt(formulaElements[1].charCodeAt(0)) - 64;
       for(let i = startIndex; i <= endIndex; i++){
         let cellId = `r-${row}-${i}`
         input.push(document.getElementById(cellId).innerHTML);
@@ -403,8 +403,8 @@ calculateExpression = formula => {
     }
   } //if formula does not start with SUM, add all cell data and operators to the input array.
   else{
-    formulaArr = formula.split(/([=*/%+-])/g).splice(2);
-    formulaArr.forEach(operand => {
+    formulaElements = formula.split(/([=*/%+-])/g).splice(2);
+    formulaElements.forEach(operand => {
       if (operand.toLowerCase() !== operand.toUpperCase()) {
           let cellId = `r-${operand.charAt(1)}-${operand.charCodeAt(0) - 64}`
           input.push(document.getElementById(cellId).innerHTML);
@@ -456,53 +456,54 @@ createCellObservable = cellId => {
   return rxjs.fromEvent(document.getElementById(cellId), "focusout");
 };
 
-
+// Creates and returns observables for each cells involved in the formula
 createObservables = formula => {
-  let formulaArr = [];
-  let currentObs = [];
+  let formulaElements = [];
+  let observables = [];
+  //For calculation over range
   if(formula.startsWith("=SUM")){
     formula = formula.replace("=SUM(","");
     formula = formula.replace(")","");
-    formulaArr = formula.split(":");
+    formulaElements = formula.split(":");
     //Same Column
-    if(formulaArr[0].charAt(0) === formulaArr[1].charAt(0)){ 
-      let column = formulaArr[0].charCodeAt(0);
-      let startIndex = parseInt(formulaArr[0].charAt(1));
-      let endIndex = parseInt(formulaArr[1].charAt(1));
+    if(formulaElements[0].charAt(0) === formulaElements[1].charAt(0)){ 
+      let column = formulaElements[0].charCodeAt(0);
+      let startIndex = parseInt(formulaElements[0].charAt(1));
+      let endIndex = parseInt(formulaElements[1].charAt(1));
       for(let i = startIndex; i <= endIndex; i++){
         let cellId = `r-${i}-${column - 64}`
-        currentObs.push(
+        observables.push(
           this.createCellObservable(cellId)
         );
       }
     }
     //Same Row
     else{
-      let row = formulaArr[0].charAt(1);
-      let startIndex = parseInt(formulaArr[0].charCodeAt(0)) - 64;
-      let endIndex = parseInt(formulaArr[1].charCodeAt(0)) - 64;
+      let row = formulaElements[0].charAt(1);
+      let startIndex = parseInt(formulaElements[0].charCodeAt(0)) - 64;
+      let endIndex = parseInt(formulaElements[1].charCodeAt(0)) - 64;
       for(let i = startIndex; i <= endIndex; i++){
         let cellId = `r-${row}-${i}`
-        currentObs.push(
+        observables.push(
           this.createCellObservable(cellId)
         );
       }
     }
   }
   else{
-    formulaArr = formula.split(/([=*/%+-])/g);
-    if (formulaArr.length > 2) {
-      for (let i = 1; i < formulaArr.length; i++) {
-        if (formulaArr[i].length === 2) {
-          let cellId = `r-${formulaArr[i].charAt(1)}-${formulaArr[i].charCodeAt(0) - 64}`;
-          currentObs.push(
+    formulaElements = formula.split(/([=*/%+-])/g);
+    if (formulaElements.length > 2) {
+      for (let i = 1; i < formulaElements.length; i++) {
+        if (formulaElements[i].length === 2) {
+          let cellId = `r-${formulaElements[i].charAt(1)}-${formulaElements[i].charCodeAt(0) - 64}`;
+          observables.push(
             this.createCellObservable(cellId)
           );
         }
       }
     }
   }
-  return currentObs;
+  return observables;
 };
 
 createSpreadsheet = () => {
