@@ -367,9 +367,11 @@ createControls = () => {
 }
 
 //Helper method to calculate the given math formula
-calculateExpression = formula => {
+calculateExpression = (formula, resultCellId) => {
+  var BreakException = {};
   let formulaElements = [];
   let input = [];
+  let invalid = false;
   //If the formula starts with sum, add all cell values in the range with a + sign btw them
   if(formula.startsWith("=SUM")){
     formula = formula.replace("=SUM(","");
@@ -382,6 +384,11 @@ calculateExpression = formula => {
       let endIndex = parseInt(formulaElements[1].charAt(1));
       for(let i = startIndex; i <= endIndex; i++){
         let cellId = `r-${i}-${column - 64}`
+        let cellValue = document.getElementById(cellId).innerHTML;
+        if(cellValue == "" || cellId === resultCellId){
+          invalid = true;
+          break;
+        }
         input.push(document.getElementById(cellId).innerHTML);
         if(i !== endIndex){
           input.push("+");
@@ -395,6 +402,11 @@ calculateExpression = formula => {
       let endIndex = parseInt(formulaElements[1].charCodeAt(0)) - 64;
       for(let i = startIndex; i <= endIndex; i++){
         let cellId = `r-${row}-${i}`
+        let cellValue = document.getElementById(cellId).innerHTML;
+        if(cellValue == "" || cellId === resultCellId){
+          invalid = true;
+          break;
+        }
         input.push(document.getElementById(cellId).innerHTML);
         if(i !== endIndex){
           input.push("+");
@@ -404,17 +416,26 @@ calculateExpression = formula => {
   } //if formula does not start with SUM, add all cell data and operators to the input array.
   else{
     formulaElements = formula.split(/([=*/%+-])/g).splice(2);
-    formulaElements.forEach(operand => {
-      if (operand.toLowerCase() !== operand.toUpperCase()) {
-          let cellId = `r-${operand.charAt(1)}-${operand.charCodeAt(0) - 64}`
-          input.push(document.getElementById(cellId).innerHTML);
-      } else {
-        input.push(operand);
-      }
-    });
+    try{
+      formulaElements.forEach(operand => {
+        if (operand.toLowerCase() !== operand.toUpperCase()) {
+            let cellId = `r-${operand.charAt(1)}-${operand.charCodeAt(0) - 64}`
+            let cellValue = document.getElementById(cellId).innerHTML;
+          if(cellValue == "" || cellId === resultCellId){
+            invalid = true;
+            throw BreakException;
+          }
+            input.push(document.getElementById(cellId).innerHTML);
+        } else {
+          input.push(operand);
+        }
+      });
+    }catch(e){
+      if (e !== BreakException) throw e;
+    }
   }
   //Continue the process till the formula array is empty
-  while (input.length > 1) {
+  while (!invalid && input.length > 1) {
     // find the first operator at the lowest level
     let reduceAt = 0;
     let found = false;
@@ -447,6 +468,9 @@ calculateExpression = formula => {
       newInput.push(input[i]);
     }
     input = newInput;
+  }
+  if(invalid){
+    return "";
   }
   return input[0];
 };
@@ -506,8 +530,9 @@ createObservables = formula => {
   return observables;
 };
 
+//Base method to create various spreadsheet elements.
 createSpreadsheet = () => {
-  const spreadsheetData = this.getData();
+  const spreadsheetData = this.getData(); //Get the global variable
   defaultRowCount = spreadsheetData.length - 1 || defaultRowCount;
   defaultColCount = spreadsheetData[0].length - 1 || defaultColCount;
 
@@ -527,32 +552,31 @@ createSpreadsheet = () => {
 
   populateTable();
 
-  /*
-  tableBody.addEventListener("focusin", function(e) {
-    if (e.target && e.target.nodeName === "TD") {
-      let item = e.target;
-      const indices = item.id.split("-");
-      item.innerHTML = data[indices[1]][indices[2]].actualValue;
-    }
-  });
-  */
-
+  //Helper method to excute code steps upon focusout
   elementFocusout = (item) => {
     
       const indices = item.id.split("-");
       let data = getData();
       let currentCellData = item.innerHTML;
       if(currentCellData.startsWith("=")){
-        let calcValue = calculateExpression(currentCellData);
+        //Calculate the current value
+        let calcValue = calculateExpression(currentCellData, item.id);
+        if(calcValue == ""){
+          data[indices[1]][indices[2]].displayValue = calcValue;
+          document.getElementById(item.id).innerHTML = calcValue;
+          alert("Invalid!");
+          return;
+        }
         data[indices[1]][indices[2]].actualValue = item.innerHTML;
         data[indices[1]][indices[2]].displayValue = calcValue;
         document.getElementById(item.id).innerHTML = calcValue;
+        //get the subscription objects for each cell and subscribe to the caluclate method.
         createObservables(
             data[indices[1]][indices[2]].actualValue
         ).forEach(observable => {
           data[indices[1]][indices[2]].subscriptionObj.push(observable.subscribe(() => {
             document.getElementById(item.id).innerHTML = calculateExpression(
-                data[indices[1]][indices[2]].actualValue
+                data[indices[1]][indices[2]].actualValue, item.id
             );
             data[indices[1]][indices[2]].displayValue = document.getElementById(item.id).innerHTML;
           }));
@@ -578,7 +602,7 @@ createSpreadsheet = () => {
     }
   });
 
-  // Attach click event listener to table body
+  // Attaching click event listener to table body
   tableBody.addEventListener("click", function(e) {
     clearSelection();
     if (e.target) {
@@ -588,22 +612,10 @@ createSpreadsheet = () => {
         e.target.parentNode.classList.add("selected");
         selectedRowIndex = parseInt(e.target.parentNode.id.split("-")[1]);
       }
-      if (e.target.className === "row-insert-top") {
-        const indices = e.target.parentNode.id.split("-");
-        addRow(parseInt(indices[2]), "top");
-      }
-      if (e.target.className === "row-insert-bottom") {
-        const indices = e.target.parentNode.id.split("-");
-        addRow(parseInt(indices[2]), "bottom");
-      }
-      if (e.target.className === "row-delete") {
-        const indices = e.target.parentNode.id.split("-");
-        deleteRow(parseInt(indices[2]));
-      }
     }
   });
 
-  // Helper function to highlight the selected headers
+  // Helper function to highlight upon selection
   highlightColumn = colId => {
       let data = this.getData();
       for (let i = 1; i < data.length; i++) {
