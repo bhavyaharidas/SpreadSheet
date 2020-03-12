@@ -62,6 +62,5 @@ https://unpkg.com/rxjs/bundles/rxjs.umd.js
 
 ### References -
 
-https://developer.mozilla.org/en-US/docs/Web/CSS
-
-https://sass-lang.com/
+1. https://developer.mozilla.org/en-US/docs/Web/JavaScript
+2. https://rxjs-dev.firebaseapp.com/guide/overview
