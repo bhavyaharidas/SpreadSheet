@@ -1,6 +1,6 @@
-# assignment-6-bhavyaharidas
+# Spread Sheet Web App
 
-## Web Design Assignment to learn about JavaScript events & RxJS
+## Web Design Project to learn about JavaScript events & RxJS
 
 ### Problem Statement - Create a spreadsheet application like Google sheets using Javascript, RxJS, and CSS.
 Develop a spreadsheet application containing the following functionalities-
@@ -15,8 +15,6 @@ Develop a spreadsheet application containing the following functionalities-
 
 Name - Bhavya Haridas
 
-NUID - 001470055
-
 ### Technologies used -
 1. HTML
 2. CSS
@@ -28,8 +26,8 @@ NUID - 001470055
 
 ### Steps to Replicate -
 
-1. Clone repository - git clone https://github.com/neu-mis-info6150-spring-2020/assignment-6-bhavyaharidas
-2. Open folder assignment-6-bhavyaharidas
+1. Clone repository - git clone https://github.com/bhavyaharidas/SpreadSheet.git
+2. Open folder SpreadSheet
 3. Double click on index.html to open the web page on a browser
 
 ### Steps to make use of the functionalities.
